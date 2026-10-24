@@ -12,12 +12,24 @@ function connectOpts(clinic) {
 }
 
 export async function createDepositCheckout({ clinic, service, booking, successUrl, cancelUrl }) {
+  // Obtenemos la URL de producción desde variables de entorno
+  const baseUrl = process.env.FRONTEND_URL || 'https://reservas-clinica-frontend.vercel.app';
+
+  // Si la URL que le entra a la función contiene 'localhost', la cambiamos por la URL real
+  const finalSuccessUrl = successUrl.includes('localhost') 
+    ? successUrl.replace(/http:\/\/localhost:\d+/, baseUrl) 
+    : successUrl;
+
+  const finalCancelUrl = cancelUrl.includes('localhost') 
+    ? cancelUrl.replace(/http:\/\/localhost:\d+/, baseUrl) 
+    : cancelUrl;
+
   return stripe.checkout.sessions.create(
     {
       mode: 'payment',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      expires_at: Math.floor(Date.now() / 1000) + 35 * 60, // Stripe exige ≥30 min; 35 deja margen si el reloj va desfasado
+      success_url: finalSuccessUrl,
+      cancel_url: finalCancelUrl,
+      expires_at: Math.floor(Date.now() / 1000) + 35 * 60,
       customer_email: booking.patient.email || undefined,
       line_items: [
         {
