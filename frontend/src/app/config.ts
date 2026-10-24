@@ -5,6 +5,6 @@ export const API_URL =
   typeof location !== 'undefined' && 
   (location.hostname === 'localhost' || location.hostname === LOCAL_IP || location.hostname.startsWith('192.168.'))
     ? `http://${location.hostname}:3000/api`
-    : 'https://TU-API.onrender.com/api';
+    : 'https://reservas-clinica.onrender.com/api';
 
 export const CLINIC_TZ = 'Europe/Madrid';
