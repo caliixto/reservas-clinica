@@ -12,22 +12,24 @@ function connectOpts(clinic) {
 }
 
 export async function createDepositCheckout({ clinic, service, booking, successUrl, cancelUrl }) {
+  // Forzamos la base URL de Vercel para producción (o la que tú uses)
   const baseUrl = process.env.FRONTEND_URL || 'https://reservas-clinica-frontend.vercel.app';
 
-  // Forzamos el cambio si la URL contiene localhost de cualquier forma (http, https, con o sin puerto)
-  let finalSuccessUrl = successUrl;
-  if (successUrl && successUrl.includes('localhost')) {
-    const routeIndex = successUrl.indexOf('/c/');
-    const route = routeIndex !== -1 ? successUrl.substring(routeIndex) : `/c/${clinic.slug}/exito`;
-    finalSuccessUrl = `${baseUrl}${route}`;
-  }
+  // Si la ruta contiene '/c/', extraemos esa parte exacta (ej: /c/fisio-lugo/exito)
+  // Si no, montamos una por defecto con el slug de la clínica.
+  const successRoute = successUrl && successUrl.includes('/c/') 
+    ? successUrl.substring(successUrl.indexOf('/c/')) 
+    : `/c/${clinic.slug}/exito`;
 
-  let finalCancelUrl = cancelUrl;
-  if (cancelUrl && cancelUrl.includes('localhost')) {
-    const routeIndex = cancelUrl.indexOf('/c/');
-    const route = routeIndex !== -1 ? cancelUrl.substring(routeIndex) : `/c/${clinic.slug}`;
-    finalCancelUrl = `${baseUrl}${route}`;
-  }
+  const cancelRoute = cancelUrl && cancelUrl.includes('/c/') 
+    ? cancelUrl.substring(cancelUrl.indexOf('/c/')) 
+    : `/c/${clinic.slug}`;
+
+  // Construimos las URLs finales utilizando siempre el dominio de producción
+  const finalSuccessUrl = `${baseUrl}${successRoute}`;
+  const finalCancelUrl = `${baseUrl}${cancelRoute}`;
+
+  console.log("URL de éxito generada para Stripe:", finalSuccessUrl); // 👈 Esto saldrá en los logs de Render para que lo veas
 
   return stripe.checkout.sessions.create(
     {
