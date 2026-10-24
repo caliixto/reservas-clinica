@@ -12,24 +12,33 @@ function connectOpts(clinic) {
 }
 
 export async function createDepositCheckout({ clinic, service, booking, successUrl, cancelUrl }) {
-  // Forzamos la base URL de Vercel para producción (o la que tú uses)
+  // Forzamos el dominio base de producción en Vercel
   const baseUrl = process.env.FRONTEND_URL || 'https://reservas-clinica-frontend.vercel.app';
 
-  // Si la ruta contiene '/c/', extraemos esa parte exacta (ej: /c/fisio-lugo/exito)
-  // Si no, montamos una por defecto con el slug de la clínica.
-  const successRoute = successUrl && successUrl.includes('/c/') 
-    ? successUrl.substring(successUrl.indexOf('/c/')) 
-    : `/c/${clinic.slug}/exito`;
+  // Extraemos únicamente la ruta final que hay después del dominio (ej: /c/demo-fisio/cita/...)
+  // Si successUrl trae algo como http://localhost:4200/c/demo-fisio/cita/xyz, nos quedamos solo con /c/demo-fisio/cita/xyz
+  let route = '/c/' + clinic.slug;
+  if (successUrl) {
+    try {
+      // Si es una URL completa, parseamos su pathname y search
+      const parsed = new URL(successUrl);
+      route = parsed.pathname + parsed.search;
+    } catch {
+      // Si es una ruta relativa o extraña, buscamos a partir de '/c/'
+      const index = successUrl.indexOf('/c/');
+      if (index !== -1) {
+        route = successUrl.substring(index);
+      }
+    }
+  }
 
-  const cancelRoute = cancelUrl && cancelUrl.includes('/c/') 
-    ? cancelUrl.substring(cancelUrl.indexOf('/c/')) 
-    : `/c/${clinic.slug}`;
+  // Construimos las URLs finales usando obligatoriamente el dominio de Vercel
+  const finalSuccessUrl = `${baseUrl}${route}`;
+  
+  // Para el cancel, igual pero apuntando a la home de la clínica
+  const finalCancelUrl = `${baseUrl}/c/${clinic.slug}`;
 
-  // Construimos las URLs finales utilizando siempre el dominio de producción
-  const finalSuccessUrl = `${baseUrl}${successRoute}`;
-  const finalCancelUrl = `${baseUrl}${cancelRoute}`;
-
-  console.log("URL de éxito generada para Stripe:", finalSuccessUrl); // 👈 Esto saldrá en los logs de Render para que lo veas
+  console.log("URL de éxito FINAL forzada para Stripe:", finalSuccessUrl);
 
   return stripe.checkout.sessions.create(
     {
