@@ -90,3 +90,26 @@ test('sin transporte, sendMail no falla (modo simulado)', async () => {
   const r = await sendMail({ to: 'a@b.es', subject: 'Hola', text: 'texto' });
   assert.equal(r.simulated, true);
 });
+
+import { createResendTransport } from '../src/lib/mailer.js';
+
+test('Resend: envía a la API con el formato esperado (adjuntos en base64, reply_to)', async () => {
+  let call;
+  const fakeFetch = async (url, opts) => ((call = { url, opts }), { ok: true, json: async () => ({ id: 'e1' }) });
+  const t = createResendTransport('re_key', fakeFetch);
+  await t.sendMail({
+    from: 'Reservas <a@b.es>', to: 'p@x.es', subject: 'Hola', text: 't', html: '<p>h</p>', replyTo: 'clinica@x.es',
+    attachments: [{ filename: 'cita.ics', content: 'BEGIN:VCALENDAR' }],
+  });
+  assert.equal(call.url, 'https://api.resend.com/emails');
+  assert.equal(call.opts.headers.Authorization, 'Bearer re_key');
+  const body = JSON.parse(call.opts.body);
+  assert.deepEqual(body.to, ['p@x.es']);
+  assert.equal(body.reply_to, 'clinica@x.es');
+  assert.equal(Buffer.from(body.attachments[0].content, 'base64').toString(), 'BEGIN:VCALENDAR');
+});
+
+test('Resend: un error de la API se convierte en excepción con el motivo', async () => {
+  const t = createResendTransport('k', async () => ({ ok: false, status: 403, json: async () => ({ message: 'dominio sin verificar' }) }));
+  await assert.rejects(() => t.sendMail({ from: 'a', to: 'b', subject: 's' }), /Resend 403: dominio sin verificar/);
+});

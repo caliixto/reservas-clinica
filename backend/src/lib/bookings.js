@@ -56,6 +56,7 @@ export async function sendPatientConfirmation(clinic, service, booking) {
   });
   await sendMail({
     to: booking.patient.email,
+    replyTo: clinic.email, // si el paciente responde al correo, le llega a la clínica
     subject,
     text,
     html,
